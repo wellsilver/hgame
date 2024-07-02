@@ -12,4 +12,5 @@ void entry() {
 
   size_t threads = 1;
   clEnqueueNDRangeKernel(devicequeue, shader, 1, NULL, &threads, NULL, 0, NULL, NULL);
+  clFinish(devicequeue);
 }

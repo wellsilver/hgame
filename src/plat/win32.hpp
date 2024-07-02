@@ -5,6 +5,9 @@
 #define UNICODE
 #endif 
 
+#define CL_TARGET_OPENCL_VERSION 300
+#include <CL/opencl.h>
+
 #include <sstream>
 #include <thread>
 
