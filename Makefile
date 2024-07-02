@@ -1,11 +1,11 @@
 all: build run clean
 
 build:
-	g++ src/main.cpp -o main.o -g -municode -L lib -I lib -l OpenCL
+	g++ src/main.cpp -o main.exe -g -municode -L lib -I lib -l OpenCL -l gdi32
 
 run:
-	./main.o
+	./main.exe
 
 clean:
 	echo e
-	rm main.o
+	rm main.exe

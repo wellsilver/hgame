@@ -3,14 +3,24 @@
 
 #ifdef _WIN32
   #include "plat/win32.hpp"
+#elif
+  #error not implemented
 #endif
 
 #include "clutil.hpp"
 
 void entry() {
-  firstdevi();
+  size_t threads;
+  
+  while (!closing) {
+    framebufferwait();
 
-  size_t threads = 1;
-  clEnqueueNDRangeKernel(devicequeue, shader, 1, NULL, &threads, NULL, 0, NULL, NULL);
-  clFinish(devicequeue);
+    threads = screenx*screeny;
+    clSetKernelArg(shader, 0, sizeof(cl_mem), framebuffer);
+    clEnqueueNDRangeKernel(devicequeue, shader, 1, NULL, &threads, NULL, 0, NULL, NULL);
+    clFinish(devicequeue);
+
+    framebufferfree();
+    framebufferrender();
+  }
 }
