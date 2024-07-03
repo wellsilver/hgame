@@ -30,14 +30,6 @@ unsigned int screenx = 0;
 unsigned int screeny = 0;
 cl_mem framebuffer;
 
-HANDLE framebufferlocked; 
-void framebufferwait() {
-  WaitForSingleObject(framebufferlocked, INFINITE);
-}
-void framebufferfree() {
-  ReleaseMutex(framebufferlocked);
-}
-
 void framebufferrender() {
   framebufferwait();
   PAINTSTRUCT ps;
@@ -65,8 +57,7 @@ void crashandburn() {
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
 #ifndef debug
   std::set_terminate(crashandburn);
-#endif  
-  framebufferlocked = CreateMutex(NULL,FALSE,NULL); // empty mutex
+#endif
   // Register the window class.
   const wchar_t CLASS_NAME[]  = L"Sample Window Class";
   
@@ -126,21 +117,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_PAINT:
       return 0;
     case WM_SIZE: // resize the framebuffer so it fits
-      framebufferwait();
       screenx = LOWORD(lParam);
       screeny = HIWORD(lParam);
-      
-      cl_image_format image_format = {};
-      image_format.image_channel_order = CL_RGB;
-      image_format.image_channel_data_type = CL_UNORM_INT8;
-      cl_image_desc image_desc = {};
-      image_desc.image_type = CL_MEM_OBJECT_IMAGE2D;
-      image_desc.image_width = screenx;
-      image_desc.image_height = screeny;
-      int err;
-      framebuffer = clCreateImage(devicecontext, CL_MEM_WRITE_ONLY, &image_format, &image_desc, NULL, &err);
-      //printf("a");
-      framebufferfree();
   }
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
