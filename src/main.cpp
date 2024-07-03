@@ -10,17 +10,9 @@
 #include "clutil.hpp"
 
 void entry() {
-  size_t threads;
-  
   while (!closing) {
-    framebufferwait();
-
-    threads = screenx*screeny;
+    size_t threads[3] = {1,0,0};
     clSetKernelArg(shader, 0, sizeof(cl_mem), framebuffer);
-    clEnqueueNDRangeKernel(devicequeue, shader, 1, NULL, &threads, NULL, 0, NULL, NULL);
-    clFinish(devicequeue);
-
-    framebufferfree();
-    framebufferrender();
+    clEnqueueNDRangeKernel(devicequeue, shader, 1, NULL, threads, NULL, 0, NULL, NULL);
   }
 }

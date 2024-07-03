@@ -40,12 +40,12 @@ void framebufferfree() {
 
 void framebufferrender() {
   framebufferwait();
-  clFinish(devicequeue);
   PAINTSTRUCT ps;
 
   HDC hdc = BeginPaint(hwndsave, &ps);
 
-  SetPixel(hdc, 0, 0, RGB(255,0,0));
+  clFinish(devicequeue);
+
 
   EndPaint(hwndsave, &ps);
   framebufferfree();
