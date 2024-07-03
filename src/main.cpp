@@ -5,6 +5,7 @@
   #include "plat/win32.hpp"
 #elif
   #error not implemented
+  // if its right or not it will give an error as intended lmao
 #endif
 
 #include "clutil.hpp"
