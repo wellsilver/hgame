@@ -9,12 +9,18 @@
 #endif
 
 void entry() {
+  cl_int err;
   while (!closing) {
+    
+    size_t threads[3] = {1,1,1};
+    printf("mainbuffer %i\n", mainbuffer);
+    err = clSetKernelArg(shader, 0, sizeof(cl_mem), mainbuffer);
+    if (err != CL_SUCCESS) {earlyexit(std::string("opencl error ") + std::to_string(err));break;};
 
-    size_t threads[3] = {1,0,0};
-    clSetKernelArg(shader, 0, sizeof(cl_mem), framebuffer);
-    clEnqueueNDRangeKernel(devicequeue, shader, 1, NULL, threads, NULL, 0, NULL, NULL);
-    framebufferrender();
+    err = clEnqueueNDRangeKernel(devicequeue, shader, 1, NULL, threads, NULL, 0, NULL, NULL);
+    if (err != CL_SUCCESS) {earlyexit(std::string("opencl error ") + std::to_string(err));break;};
+
+    mainbufferrender();
 
   }
 }

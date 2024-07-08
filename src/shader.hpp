@@ -1,4 +1,9 @@
 std::string shader_code = R"(
-__kernel void pixel(write_only image2d_t out) {
-  write_imageui(out, (get_global_id(0)/480, get_global_id(0)%480 ), (255,0,0));
+struct rgb {
+  unsigned char r,g,b;
+};
+
+__kernel void pixel(__global struct rgb *out) {
+  // (get_global_id(0)/480, get_global_id(0)%480)
+  out[get_global_id(0)].r = 255;
 })";

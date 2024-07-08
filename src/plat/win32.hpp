@@ -26,23 +26,33 @@ HWND hwndsave;
 
 bool closing = false;
 
+struct rgb {
+  unsigned char r,g,b;
+};
+
 unsigned int screenx = 0;
 unsigned int screeny = 0;
-cl_mem framebuffer = 0;
+cl_mem mainbuffer = 0;
+struct rgb *externalbuffer = 0;
 
 cl_device_id devicecl;
 cl_command_queue devicequeue;
 cl_context devicecontext;
 cl_kernel shader;
 
-void framebufferrender() {
+void mainbufferrender() {
   PAINTSTRUCT ps;
 
   HDC hdc = BeginPaint(hwndsave, &ps);
-
+  
   clFinish(devicequeue);
+  cl_int err = clEnqueueReadBuffer(devicequeue, mainbuffer, CL_TRUE, 0, (screenx*screeny)*sizeof(struct rgb), externalbuffer, 0, NULL, NULL);
+  printf("err: %i\n", err);
+  printf("a: %u\n", externalbuffer[0].r);
 
   EndPaint(hwndsave, &ps);
+
+  Sleep(1000/1);
 }
 
 void earlyexit(std::string str) {
@@ -89,23 +99,29 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
   if (hwnd == NULL) return -1;
 
-  ShowWindow(hwnd, nCmdShow);
-
-  hwndsave = hwnd; // so early_exit can send its message
-
+  cl_int err;
   cl_platform_id plat;
   clGetPlatformIDs(1, &plat, nullptr);
   clGetDeviceIDs(plat, CL_DEVICE_TYPE_GPU, 1, &devicecl, nullptr);
-  devicecontext = clCreateContext(nullptr, 1, &devicecl, nullptr, nullptr, nullptr);
+  devicecontext = clCreateContext(nullptr, 1, &devicecl, nullptr, nullptr, &err);
+  if (err!=CL_SUCCESS) return err;
+  devicequeue = clCreateCommandQueueWithProperties(devicecontext, devicecl, 0, &err);
+  if (err!=CL_SUCCESS) return err;
+
+  char name[32];
+  clGetDeviceInfo(devicecl, CL_DEVICE_NAME, 31, name, NULL);
+  name[31] = 0; // null terminator
+  printf("Via: %s\n", name);
 
   // Create the compute program from the source buffer
   size_t length = shader_code.size();
   char *strings[1] = {shader_code.data()};
 
-  cl_program program = clCreateProgramWithSource(devicecontext, 1, (const char **) strings, &length, NULL);
+  cl_program program = clCreateProgramWithSource(devicecontext, 1, (const char **) strings, &length, &err);
+  if (err!=CL_SUCCESS) return err;
 
   // Build the program  
-  cl_int err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+   err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
   if (err != CL_SUCCESS) {
     size_t len;
     char buffer[2048];
@@ -117,6 +133,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
   // Create the compute kernel from the program 
   shader = clCreateKernel(program, "pixel", &err);
+  if (err!=CL_SUCCESS) return err;
+
+  ShowWindow(hwnd, nCmdShow);
+
+  hwndsave = hwnd; // so early_exit can send its message
 
   // its in a thread because most of windows isnt thread safe
   // ^ that sentence makes sense, fr fr. Its because I need to put the loop in the windows message loop
@@ -141,13 +162,20 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       return 0;
     case WM_PAINT:
       return 0;
-    case WM_SIZE: // resize the framebuffer so it fits
+    case WM_SIZE: // resize the mainbuffer so it fits
       screenx = LOWORD(lParam);
       screeny = HIWORD(lParam);
 
-      if (framebuffer!=0) clReleaseMemObject(framebuffer);
-      clCreateBuffer(devicecontext, CL_MEM_WRITE_ONLY, (screenx*screeny) * 3, NULL, NULL);
-      //                                               ^ rgb as uint24
+      if (mainbuffer!=0) {
+        clReleaseMemObject(mainbuffer);
+        delete externalbuffer;
+      }
+      externalbuffer = new struct rgb[(screenx*screeny)];
+      cl_int err;
+      mainbuffer = clCreateBuffer(devicecontext, CL_MEM_WRITE_ONLY, (screenx*screeny) * sizeof(struct rgb), NULL, &err);
+
+      printf("err: %i, mainbuffer: %i\n", err, mainbuffer);
+      if (err != CL_SUCCESS) {printf("opencl mainbuffer error %i\n",err);PostMessage(hwnd, WM_DESTROY, 0, 0);};
   }
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
