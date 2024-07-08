@@ -1,6 +1,6 @@
 std::string shader_code = R"(
 struct rgb {
-  unsigned char r,g,b;
+  unsigned char r,g,b,a;
 };
 
 __kernel void pixel(__global struct rgb *out) {
