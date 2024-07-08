@@ -5,11 +5,7 @@
 
 #include "shader.hpp"
 
-cl_device_id device;
-cl_command_queue devicequeue;
-cl_context devicecontext;
-cl_kernel shader;
-
+/*
 void firstdevi() {
   cl_platform_id platform;
   unsigned int platforms;
@@ -17,9 +13,9 @@ void firstdevi() {
   int err;
 
   clGetPlatformIDs(1, &platform, &platforms);
-  clGetDeviceIDs(platform, CL_DEVICE_TYPE_DEFAULT, 1, &device, &devices);
-  devicecontext = clCreateContext(0, 1, &device, NULL, NULL, &err);
-  devicequeue = clCreateCommandQueueWithProperties(devicecontext, device, 0, &err);
+  clGetDeviceIDs(platform, CL_DEVICE_TYPE_DEFAULT, 1, &devicecl, &devices);
+  devicecontext = clCreateContext(0, 1, &devicecl, NULL, NULL, &err);
+  devicequeue = clCreateCommandQueueWithProperties(devicecontext, devicecl, 0, &err);
 
   // Create the compute program from the source buffer
   size_t length = shader_code.size();
@@ -34,12 +30,13 @@ void firstdevi() {
     char buffer[2048];
 
     printf("Compiling failed.\n");
-    clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+    clGetProgramBuildInfo(program, devicecl, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
     printf("%s\n", buffer);
   }
 
   // Create the compute kernel from the program 
   shader = clCreateKernel(program, "pixel", &err);
 }
+*/
 
 #endif

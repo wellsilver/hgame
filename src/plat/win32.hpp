@@ -8,7 +8,7 @@
 #define CL_TARGET_OPENCL_VERSION 300
 #include <CL/opencl.h>
 
-#include "../clutil.hpp"
+#include "../shader.hpp"
 
 #include <sstream>
 #include <thread>
@@ -28,19 +28,21 @@ bool closing = false;
 
 unsigned int screenx = 0;
 unsigned int screeny = 0;
-cl_mem framebuffer;
+cl_mem framebuffer = 0;
+
+cl_device_id devicecl;
+cl_command_queue devicequeue;
+cl_context devicecontext;
+cl_kernel shader;
 
 void framebufferrender() {
-  framebufferwait();
   PAINTSTRUCT ps;
 
   HDC hdc = BeginPaint(hwndsave, &ps);
 
   clFinish(devicequeue);
 
-
   EndPaint(hwndsave, &ps);
-  framebufferfree();
 }
 
 void earlyexit(std::string str) {
@@ -91,10 +93,33 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
   hwndsave = hwnd; // so early_exit can send its message
 
-  firstdevi();
+  cl_platform_id plat;
+  clGetPlatformIDs(1, &plat, nullptr);
+  clGetDeviceIDs(plat, CL_DEVICE_TYPE_GPU, 1, &devicecl, nullptr);
+  devicecontext = clCreateContext(nullptr, 1, &devicecl, nullptr, nullptr, nullptr);
+
+  // Create the compute program from the source buffer
+  size_t length = shader_code.size();
+  char *strings[1] = {shader_code.data()};
+
+  cl_program program = clCreateProgramWithSource(devicecontext, 1, (const char **) strings, &length, NULL);
+
+  // Build the program  
+  cl_int err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
+  if (err != CL_SUCCESS) {
+    size_t len;
+    char buffer[2048];
+
+    printf("Compiling failed.\n");
+    clGetProgramBuildInfo(program, devicecl, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+    printf("%s\n", buffer);
+  }
+
+  // Create the compute kernel from the program 
+  shader = clCreateKernel(program, "pixel", &err);
 
   // its in a thread because most of windows isnt thread safe
-  // ^ that sentence makes sense, fr fr. Its because I need to put the message thing in some loop which.. nah
+  // ^ that sentence makes sense, fr fr. Its because I need to put the loop in the windows message loop
   std::thread entrythread(entry);
 
   MSG msg = {};
@@ -119,6 +144,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_SIZE: // resize the framebuffer so it fits
       screenx = LOWORD(lParam);
       screeny = HIWORD(lParam);
+
+      if (framebuffer!=0) clReleaseMemObject(framebuffer);
+      clCreateBuffer(devicecontext, CL_MEM_WRITE_ONLY, (screenx*screeny) * 3, NULL, NULL);
+      //                                               ^ rgb as uint24
   }
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
