@@ -42,17 +42,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
   cl_command_queue queue;
   cl_kernel kernel;
   {
+    // select first device
     cl_int err;
     cl_platform_id platform;
     clGetPlatformIDs(1, &platform, NULL);
     cl_device_id device;
     clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
 
+    // create command queue
     cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
     if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
     cl_command_queue_properties prop = {};
     queue = clCreateCommandQueue(context, device, prop, &err);
     if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
+
+    // create shader
     size_t length = strlen(shader_code);
     const char **shadersrc = &shader_code;
     cl_program prgm = clCreateProgramWithSource(context, 1, shadersrc, &length, &err);
