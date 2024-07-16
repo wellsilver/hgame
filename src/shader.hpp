@@ -1,4 +1,4 @@
-std::string shader_code = R"(
+const char *shader_code = R"(
 struct rgb {
   unsigned char r,g,b,a;
 };

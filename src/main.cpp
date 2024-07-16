@@ -39,6 +39,30 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
   if (hwnd == NULL) return -1;
   
+  cl_command_queue queue;
+  cl_kernel kernel;
+  {
+    cl_int err;
+    cl_platform_id platform;
+    clGetPlatformIDs(1, &platform, NULL);
+    cl_device_id device;
+    clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
+
+    cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
+    if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
+    cl_command_queue_properties prop = {};
+    queue = clCreateCommandQueue(context, device, prop, &err);
+    if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
+    size_t length = strlen(shader_code);
+    const char **shadersrc = &shader_code;
+    cl_program prgm = clCreateProgramWithSource(context, 1, shadersrc, &length, &err);
+    if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
+    err = clCompileProgram(prgm, 1, &device, NULL, 0, NULL, NULL, NULL, NULL);
+    if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
+    kernel = clCreateKernel(prgm, "pixel", &err);
+    if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
+  }
+
   ShowWindow(hwnd, nCmdShow);
 
   MSG msg = {};
