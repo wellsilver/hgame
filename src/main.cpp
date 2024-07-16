@@ -57,7 +57,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     const char **shadersrc = &shader_code;
     cl_program prgm = clCreateProgramWithSource(context, 1, shadersrc, &length, &err);
     if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
-    err = clCompileProgram(prgm, 1, &device, NULL, 0, NULL, NULL, NULL, NULL);
+    err = clBuildProgram(prgm, 0, NULL, NULL, NULL, NULL);
     if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
     kernel = clCreateKernel(prgm, "pixel", &err);
     if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
