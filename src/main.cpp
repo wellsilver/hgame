@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <windows.h>
+#include <dxgi.h>
 #define CL_TARGET_OPENCL_VERSION 120
 #include <CL/cl.h>
 #include "shader.hpp"
@@ -36,7 +37,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     hInstance,  // Instance handle
     NULL        // Additional application data
   );
-
   if (hwnd == NULL) return -1;
   
   cl_command_queue queue;
@@ -69,8 +69,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
   ShowWindow(hwnd, nCmdShow);
 
+  cl_event frameready = 0;
+  cl_int framereadys;
+
+  size_t threads[3] = {480, 480,1};
+  clEnqueueNDRangeKernel(queue, kernel, 1, NULL, threads, NULL, 0, NULL, &frameready);
+
   MSG msg = {};
   while (GetMessage(&msg, NULL, 0, 0) > 0) {
+    clGetEventInfo(frameready, CL_EVENT_COMMAND_EXECUTION_STATUS, sizeof(cl_int), &framereadys, nullptr);
+    if (framereadys == CL_COMPLETE) {
+      // render this frame and start the next one
+      
+      clEnqueueNDRangeKernel(queue, kernel, 1, NULL, threads, NULL, 0, NULL, &frameready);
+    }
+
     TranslateMessage(&msg);
     DispatchMessage(&msg);
   }
