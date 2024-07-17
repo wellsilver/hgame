@@ -8,6 +8,10 @@
 
 bool closing = false;
 
+struct rgb {
+  unsigned char r,g,b,a;
+};
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
@@ -39,6 +43,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
   );
   if (hwnd == NULL) return -1;
   
+  cl_context context;
   cl_command_queue queue;
   cl_kernel kernel;
   {
@@ -50,7 +55,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, 1, &device, NULL);
 
     // create command queue
-    cl_context context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
+    context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
     if (err!=CL_SUCCESS) {printf("cl %i\n", err);return -1;}
     cl_command_queue_properties prop = {};
     queue = clCreateCommandQueue(context, device, prop, &err);
@@ -72,16 +77,31 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
   cl_event frameready = 0;
   cl_int framereadys;
 
-  size_t threads[3] = {480, 480,1};
-  clEnqueueNDRangeKernel(queue, kernel, 1, NULL, threads, NULL, 0, NULL, &frameready);
+  size_t threads[3] = {480, 480, 1};
+
+  struct rgb *framebuffer = (struct rgb *) malloc((480*480)*sizeof(struct rgb));
+  cl_mem clbuffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, (480*480)*sizeof(struct rgb), NULL, NULL);
+
+  clEnqueueNDRangeKernel(queue, kernel, 1, NULL, threads, NULL, 0, NULL, NULL);
+  clEnqueueReadBuffer(queue, clbuffer, CL_FALSE, 0, (480*480)*sizeof(struct rgb), framebuffer, 0, NULL, &frameready);
 
   MSG msg = {};
   while (GetMessage(&msg, NULL, 0, 0) > 0) {
     clGetEventInfo(frameready, CL_EVENT_COMMAND_EXECUTION_STATUS, sizeof(cl_int), &framereadys, nullptr);
     if (framereadys == CL_COMPLETE) {
       // render this frame and start the next one
-      
+      clFinish(queue);
+      printf("%i", framebuffer[0].r);
+      HBITMAP bitmap = CreateBitmap(480, 480, 1, 32, framebuffer);
+      HDC hdcbitmap = CreateCompatibleDC(NULL);
+      SelectObject(hdcbitmap, bitmap);
+      LPPAINTSTRUCT lpstruct;
+      HDC hdc = BeginPaint(hwnd, lpstruct);
+      BitBlt(hdc, 0, 0, 480, 480, hdcbitmap, 0, 0, SRCCOPY);
+      EndPaint(hwnd, lpstruct);
+
       clEnqueueNDRangeKernel(queue, kernel, 1, NULL, threads, NULL, 0, NULL, &frameready);
+      clEnqueueReadBuffer(queue, clbuffer, CL_FALSE, 0, (480*480)*sizeof(struct rgb), framebuffer, 0, NULL, &frameready);
     }
 
     TranslateMessage(&msg);
